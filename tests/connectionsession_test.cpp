@@ -84,7 +84,10 @@ bool delegatesProcessLifecycleThroughPort()
     }
 
     coreProcess->complete();
+    coreProcess->lastInput.clear();
+    session.submitInput("stale input");
     if (finishedCalls != 1
+        || !coreProcess->lastInput.isEmpty()
         || session.state() != ConnectionState::Disconnected
         || session.isActive())
     {

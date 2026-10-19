@@ -1,0 +1,71 @@
+name: aTrust TOTP Windows package
+
+on:
+  push:
+    branches: [codex/atrust-totp-fix]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      MSBUILDDISABLENODEREUSE: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.3'
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: 'qt5compat qtpositioning qtserialport qtwebchannel qtwebengine'
+          cache: true
+          cache-key-prefix: install-qt-action-win64_msvc2022_64
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -DBUILD_TESTING=ON -DCMAKE_AUTOGEN_PARALLEL=1 '-DREL_VER:STRING=1.9.1-totp.2'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -LiteralPath build/CMakeCache.txt -Pattern '^REL_VER:STRING=1\.9\.1-totp\.2$' -Quiet)) {
+            throw 'Release version was not passed intact to CMake.'
+          }
+
+      - name: Build application and tests
+        run: cmake --build build --config Release --parallel 2 -- /maxcpucount:2 /nodeReuse:false
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package and audit runtime files
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          ./scripts/deploy-windows.ps1 -BuildDir build -Architecture amd64
+          ./scripts/verify-windows-package.ps1 -PackageDirectory EZ4Connect | Set-Content -LiteralPath build/package-audit.json -Encoding utf8
+          Compress-Archive -Path EZ4Connect -DestinationPath EZ4Connect-v1.9.1-totp.2-windows-x64.zip
+          $hash = (Get-FileHash -LiteralPath EZ4Connect-v1.9.1-totp.2-windows-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText((Join-Path $PWD SHA256SUMS.txt), $hash + '  EZ4Connect-v1.9.1-totp.2-windows-x64.zip' + [Environment]::NewLine, [Text.UTF8Encoding]::new($false))
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: EZ4Connect-v1.9.1-totp.2-windows-x64
+          path: |
+            EZ4Connect-v1.9.1-totp.2-windows-x64.zip
+            SHA256SUMS.txt
+            build/package-audit.json
+          retention-days: 14
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atrust-totp-test-logs
+          path: build/Testing/Temporary/*.log
+          if-no-files-found: ignore

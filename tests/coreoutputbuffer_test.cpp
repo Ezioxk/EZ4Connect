@@ -2,9 +2,36 @@
 #include <QDebug>
 
 #include "infrastructure/coreprocess/coreoutputbuffer.h"
+#include "infrastructure/coreprocess/coreoutputparser.h"
 
 namespace
 {
+bool recognizesEveryTotpSplit()
+{
+    for (const QByteArray prompt : {QByteArray("Please enter the TOTP token:"),
+                                   QByteArray("Please enter your TOTP code:")})
+    {
+        for (qsizetype split = 0; split <= prompt.size(); ++split)
+        {
+            CoreOutputBuffer buffer;
+            int requests = 0;
+            const auto append = [&](const QByteArray &chunk)
+            {
+                auto lines = buffer.append(chunk);
+                if (CoreOutputParser::hasInteractivePrompt(buffer.pendingData()))
+                    lines.append(buffer.takePendingData());
+                for (const auto &line : lines)
+                    if (CoreOutputParser::parse(QString::fromUtf8(line)) == CoreOutputEvent::TotpCode)
+                        ++requests;
+            };
+            append(prompt.first(split));
+            append(prompt.sliced(split));
+            append("\r\n");
+            if (requests != 1) return false;
+        }
+    }
+    return true;
+}
 bool buffersFragmentedLines()
 {
     CoreOutputBuffer buffer;
@@ -68,6 +95,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
     return buffersFragmentedLines()
+               && recognizesEveryTotpSplit()
                && extractsMultipleLinesAndNormalizesCrLf()
                && preservesSplitUtf8Characters()
                && takesPendingData()

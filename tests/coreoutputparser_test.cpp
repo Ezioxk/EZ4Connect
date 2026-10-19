@@ -20,6 +20,10 @@ bool recognizesCoreProtocol()
         {"Please enter the SMS verification code: ", CoreOutputEvent::SmsCodeWithSkipOption},
         {"Please enter your SMS code:", CoreOutputEvent::SmsCode},
         {"Please enter your TOTP code:", CoreOutputEvent::TotpCode},
+        {"2026/10/11 17:59:12 Please enter the TOTP token:", CoreOutputEvent::TotpCode},
+        {"Continue authentication: service=auth/totp smsMode=0", CoreOutputEvent::None},
+        {"TOTP authentication failed", CoreOutputEvent::None},
+        {"Please enter the TOTP", CoreOutputEvent::None},
         {"Please enter the callback url:", CoreOutputEvent::SsoCallback},
         {"VPN client started", CoreOutputEvent::ClientStarted},
         {"graph check code still required after second login attempt", CoreOutputEvent::CaptchaFailed},
@@ -72,6 +76,7 @@ bool recognizesInteractivePromptsBeforeNewline()
         "Please enter the SMS verification code: ",
         "Please enter your SMS code:",
         "Please enter your TOTP code:",
+        "Please enter the TOTP token:",
         "Please enter rand code:",
         "Please enter the callback url:",
     };

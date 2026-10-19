@@ -33,6 +33,7 @@ public:
     void requestGraphCaptcha(const QString &graphFile);
     void requestSmsCode(bool showSkipSecondaryAuthOption);
     void requestTotpCode();
+    void dismissTotpCode();
     void requestRadiusCode(bool showSkipSecondaryAuthOption);
     void requestSsoLogin();
 
@@ -52,6 +53,7 @@ private:
     QSettings *settings;
     QPointer<LoginWindow> loginWindow;
     QPointer<QDialog> phoneNumberDialog;
+    QPointer<QDialog> totpDialog;
     QPointer<SudoWindow> sudoWindow;
     QPointer<GraphCaptchaWindow> graphCaptchaWindow;
     QPointer<SsoLoginWebView> ssoLoginWebView;

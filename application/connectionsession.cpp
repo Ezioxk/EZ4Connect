@@ -78,7 +78,10 @@ void ConnectionSession::stop()
 
 void ConnectionSession::submitInput(const QByteArray &data)
 {
-    coreProcess->writeInput(data);
+    if (state() == ConnectionState::Starting || state() == ConnectionState::Running)
+    {
+        coreProcess->writeInput(data);
+    }
 }
 
 void ConnectionSession::cancelInteractiveInput()

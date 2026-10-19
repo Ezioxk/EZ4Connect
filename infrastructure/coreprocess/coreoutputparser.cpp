@@ -18,7 +18,8 @@ CoreOutputEvent CoreOutputParser::parse(const QString &output)
     {
         return CoreOutputEvent::SmsCode;
     }
-    if (output.contains("Please enter your TOTP code:"))
+    if (output.contains("Please enter your TOTP code:")
+        || output.contains("Please enter the TOTP token:"))
     {
         return CoreOutputEvent::TotpCode;
     }
@@ -105,6 +106,7 @@ bool CoreOutputParser::hasInteractivePrompt(const QByteArray &output)
            || output.contains("Please enter the SMS verification code: ")
            || output.contains("Please enter your SMS code:")
            || output.contains("Please enter your TOTP code:")
+           || output.contains("Please enter the TOTP token:")
            || output.contains("Please enter rand code:")
            || output.contains("Please enter the RADIUS token:")
            || output.contains("Please enter the callback url:");

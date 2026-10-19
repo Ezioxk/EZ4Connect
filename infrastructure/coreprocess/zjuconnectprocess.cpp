@@ -13,6 +13,17 @@
 ZjuConnectProcess::ZjuConnectProcess(QObject *parent) : CoreProcess(parent)
 {
     zjuConnectProcess = new QProcess(this);
+    stopTimer.setSingleShot(true);
+    stopTimer.setInterval(1500);
+    connect(&stopTimer, &QTimer::timeout, this, [this]()
+    {
+        // Console applications on Windows may not handle terminate()'s WM_CLOSE.
+        // Bound shutdown without blocking the UI or affecting a later process.
+        if (stopRequested && zjuConnectProcess->state() != QProcess::NotRunning)
+        {
+            zjuConnectProcess->kill();
+        }
+    });
 
     connect(zjuConnectProcess, &QProcess::readyReadStandardOutput, this, [this]()
     {
@@ -42,8 +53,10 @@ ZjuConnectProcess::ZjuConnectProcess(QObject *parent) : CoreProcess(parent)
 
     connect(zjuConnectProcess, &QProcess::finished, this, [&]()
     {
+        stopTimer.stop();
         processOutput(standardOutputBuffer, zjuConnectProcess->readAllStandardOutput(), true);
         processOutput(standardErrorBuffer, zjuConnectProcess->readAllStandardError(), true);
+        totpInputPending = false;
         stopRequested = false;
         qInfo().noquote() << "退出原因：进程已结束";
         emit finished();
@@ -99,7 +112,14 @@ void ZjuConnectProcess::processOutputLines(const QList<QByteArray> &lines)
             emit smsCode(false);
             break;
         case CoreOutputEvent::TotpCode:
-            emit totpCode();
+            // Repeated output (including stdout/stderr copies) is one challenge
+            // until input is submitted. A subsequent prompt can request a retry.
+            if (!stopRequested && zjuConnectProcess->state() == QProcess::Running
+                && !totpInputPending)
+            {
+                totpInputPending = true;
+                emit totpCode();
+            }
             break;
         case CoreOutputEvent::RandCode:
             emit randCode();
@@ -198,6 +218,11 @@ QString ZjuConnectProcess::copyCoreForAppImage(const QString &programPath)
 
 void ZjuConnectProcess::start(const ConnectionProfile &profile)
 {
+    stopTimer.stop();
+    standardOutputBuffer.takePendingData();
+    standardErrorBuffer.takePendingData();
+    totpInputPending = false;
+    stopRequested = false;
     CoreRuntimePaths runtimePaths;
 
     // Both protocols can require a graph captcha. The UI chooses the response
@@ -291,6 +316,7 @@ void ZjuConnectProcess::stop()
     {
         stopRequested = true;
         zjuConnectProcess->terminate();
+        stopTimer.start();
     }
     else
     {
@@ -300,7 +326,13 @@ void ZjuConnectProcess::stop()
 
 void ZjuConnectProcess::writeInput(const QByteArray &data)
 {
-    zjuConnectProcess->write(data);
+    if (!stopRequested && zjuConnectProcess->state() == QProcess::Running)
+    {
+        if (zjuConnectProcess->write(data) == data.size())
+        {
+            totpInputPending = false;
+        }
+    }
 }
 
 ZjuConnectProcess::~ZjuConnectProcess()

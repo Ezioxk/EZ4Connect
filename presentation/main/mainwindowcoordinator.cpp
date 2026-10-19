@@ -34,6 +34,14 @@ MainWindowCoordinator::MainWindowCoordinator(
           this
       ))
 {
+    connect(connectionSession, &ConnectionSession::stateChanged,
+            authenticationCoordinator, [this](ConnectionState state)
+    {
+        if (state != ConnectionState::Starting)
+        {
+            authenticationCoordinator->dismissTotpCode();
+        }
+    });
     connect(
         connectionSession,
         &ConnectionSession::askSudoPass,

@@ -35,6 +35,8 @@ private:
     CoreOutputBuffer standardOutputBuffer;
     CoreOutputBuffer standardErrorBuffer;
     bool stopRequested = false;
+    bool totpInputPending = false;
+    QTimer stopTimer;
 
 };
 

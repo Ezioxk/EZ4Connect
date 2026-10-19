@@ -135,6 +135,35 @@ target_link_libraries(${PROJECT_NAME}
 include(CTest)
 
 if(BUILD_TESTING)
+    add_executable(fakeauthcore tests/fakeauthcore.cpp)
+    add_executable(totpauthflow_test
+        tests/totpauthflow_test.cpp
+        application/coreprocess.h
+        application/connectionsession.cpp
+        core/connectionsessionstate.cpp
+        infrastructure/coreprocess/zjuconnectprocess.cpp
+        infrastructure/coreprocess/corecommandbuilder.cpp
+        infrastructure/coreprocess/coreoutputbuffer.cpp
+        infrastructure/coreprocess/coreoutputparser.cpp
+        infrastructure/coreprocess/consoleoutputdecoder.cpp
+        infrastructure/platform/privileges.cpp
+        infrastructure/storage/applicationpaths.cpp
+        presentation/coordinators/authdialogcoordinator.cpp
+        presentation/presentationhelpers.cpp
+        presentation/dialogs/loginwindow/loginwindow.cpp
+        presentation/dialogs/sudowindow/sudowindow.cpp
+        presentation/dialogs/ssologinwebview/ssologinwebview.cpp
+        presentation/dialogs/graphcaptchawindow/graphcaptchawindow.cpp
+        presentation/dialogs/graphcaptchawindow/captchacanvas.cpp
+    )
+    add_dependencies(totpauthflow_test fakeauthcore)
+    target_link_libraries(totpauthflow_test Qt::Core Qt::Widgets
+        Qt::Core5Compat Qt::WebEngineWidgets ${PLATFORM_LIBS})
+    add_test(NAME totpauthflow_test COMMAND totpauthflow_test)
+    set_tests_properties(totpauthflow_test PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_FORCE_STDERR_LOGGING=1"
+        TIMEOUT 60
+    )
     add_executable(applicationlogger_test
         tests/applicationlogger_test.cpp
         application/applicationlogger.cpp
@@ -170,6 +199,7 @@ if(BUILD_TESTING)
     add_executable(coreoutputbuffer_test
         tests/coreoutputbuffer_test.cpp
         infrastructure/coreprocess/coreoutputbuffer.cpp
+        infrastructure/coreprocess/coreoutputparser.cpp
     )
     target_include_directories(coreoutputbuffer_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
     target_link_libraries(coreoutputbuffer_test Qt::Core)
